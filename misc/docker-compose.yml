@@ -1,0 +1,182 @@
+version: "3.3"
+services:
+  postgres:
+    image: postgres:latest
+    container_name: postgressql
+    restart: always
+    environment:
+      - POSTGRES_USER=adminpostgres
+      - POSTGRES_PASSWORD=87654321
+      - POSTGRES_DB=gold_account
+    ports:
+      # <Port exposed> : < Postgres Port running inside container>
+      - "5432:5432"
+    expose:
+      # Opens port 5432 on the container
+      - "5432"
+      # Where our data will be persisted
+    volumes:
+      - ./db/init.sql:/docker-entrypoint-initdb.d/init.sql
+      # - ./db/data/:/var/lib/postgresql/data
+  zookeeper:
+    image: confluentinc/cp-zookeeper:5.2.4
+    ports:
+      - "2181:2181"
+    environment:
+      ZOOKEEPER_CLIENT_PORT: 2181
+      ZOOKEEPER_TICK_TIME: 2000
+  kafka:
+    image: confluentinc/cp-kafka:5.3.1
+    depends_on:
+      - zookeeper
+    ports:
+      - 9093:9093
+      - 29092:29092
+    environment:
+      KAFKA_BROKER_ID: 1
+      KAFKA_ZOOKEEPER_CONNECT: zookeeper:2181
+      KAFKA_ADVERTISED_LISTENERS: PLAINTEXT://kafka:29092,PLAINTEXT_HOST://localhost:9093
+      KAFKA_LISTENER_SECURITY_PROTOCOL_MAP: PLAINTEXT:PLAINTEXT,PLAINTEXT_HOST:PLAINTEXT
+      KAFKA_INTER_BROKER_LISTENER_NAME: PLAINTEXT
+      KAFKA_OFFSETS_TOPIC_REPLICATION_FACTOR: 1
+      JMX_PORT: 9998
+      KAFKA_JMX_OPTS: -Dcom.sun.management.jmxremote -Dcom.sun.management.jmxremote.authenticate=false -Dcom.sun.management.jmxremote.ssl=false -Djava.rmi.server.hostname=kafka1 -Dcom.sun.management.jmxremote.rmi.port=9998
+  kafka-ui:
+    image: provectuslabs/kafka-ui
+    ports:
+      - "8080:8080"
+    restart: always
+    environment:
+      KAFKA_CLUSTERS_0_NAME: local
+      KAFKA_CLUSTERS_0_BOOTSTRAPSERVERS: kafka:29092
+      KAFKA_CLUSTERS_0_ZOOKEEPER: zookeeper:2181
+    depends_on:
+      - zookeeper
+      - kafka
+
+  ## Microservices
+  topup-input-service:
+    container_name: topup-input-service
+    build:
+      context: ../microservices/topup-input-service
+      dockerfile: Dockerfile
+    ports:
+      - "7009:7009"
+    restart: always
+    environment:
+      WAIT_HOSTS: postgres:5432, kafka:9093, zookeeper:2181
+    depends_on:
+      - zookeeper
+      - kafka
+
+  balance-check-service:
+    container_name: balance-check-service
+    build:
+      context: ../microservices/balance-check-service
+      dockerfile: Dockerfile
+    ports:
+      - "7001:7001"
+    restart: always
+    environment:
+      WAIT_HOSTS: postgres:5432, kafka:9093, zookeeper:2181
+    depends_on:
+      - zookeeper
+      - kafka
+
+  buyback-input-service:
+    container_name: buyback-input-service
+    build:
+      context: ../microservices/buyback-input-service
+      dockerfile: Dockerfile
+    ports:
+      - "7002:7002"
+    restart: always
+    environment:
+      WAIT_HOSTS: postgres:5432, kafka:9093, zookeeper:2181
+    depends_on:
+      - zookeeper
+      - kafka
+
+  mutation-check-service:
+    container_name: mutation-check-service
+    build:
+      context: ../microservices/mutation-check-service
+      dockerfile: Dockerfile
+    ports:
+      - "7003:7003"
+    restart: always
+    environment:
+      WAIT_HOSTS: postgres:5432, kafka:9093, zookeeper:2181
+    depends_on:
+      - zookeeper
+      - kafka
+
+  price-check-service:
+    container_name: price-check-service
+    build:
+      context: ../microservices/price-check-service
+      dockerfile: Dockerfile
+    ports:
+      - "7004:7004"
+    restart: always
+    environment:
+      WAIT_HOSTS: postgres:5432, kafka:9093, zookeeper:2181
+    depends_on:
+      - zookeeper
+      - kafka
+
+  price-input-service:
+    container_name: price-input-service
+    build:
+      context: ../microservices/price-input-service
+      dockerfile: Dockerfile
+    ports:
+      - "7005:7005"
+    restart: always
+    environment:
+      WAIT_HOSTS: postgres:5432, kafka:9093, zookeeper:2181
+    depends_on:
+      - zookeeper
+      - kafka
+
+  storage-buyback-input-service:
+    container_name: storage-buyback-input-service
+    build:
+      context: ../microservices/storage-buyback-input-service
+      dockerfile: Dockerfile
+    ports:
+      - "7006:7006"
+    restart: always
+    environment:
+      WAIT_HOSTS: postgres:5432, kafka:9093, zookeeper:2181
+    depends_on:
+      - zookeeper
+      - kafka
+
+  storage-price-input-service:
+    container_name: storage-price-input-service
+    build:
+      context: ../microservices/storage-price-input-service
+      dockerfile: Dockerfile
+    ports:
+      - "7007:7007"
+    restart: always
+    environment:
+      WAIT_HOSTS: postgres:5432, kafka:9093, zookeeper:2181
+    depends_on:
+      - zookeeper
+      - kafka
+
+  storage-topup-input-service:
+    container_name: storage-topup-input-service
+    build:
+      context: ../microservices/storage-topup-input-service
+      dockerfile: Dockerfile
+    ports:
+      - "7008:7008"
+    restart: always
+    environment:
+      WAIT_HOSTS: postgres:5432, kafka:9093, zookeeper:2181
+    depends_on:
+      - zookeeper
+      - kafka
