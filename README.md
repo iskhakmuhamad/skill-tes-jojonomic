@@ -1,6 +1,6 @@
 # skill-tes-jojonomic
 - Require
-  - go 1.19
+  - go version => 1.19
   - docker compose
 
 - How to Run
